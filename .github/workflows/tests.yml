@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 jobs:
-  tests:
+  bun_tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -14,3 +14,26 @@ jobs:
         with:
           bun-version: 1.0.2
       - run: bun install
+      - run: bun test
+
+  nodejs_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm test
+
+  deno_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: latest
+      - run: deno test
