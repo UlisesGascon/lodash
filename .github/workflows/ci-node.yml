@@ -53,17 +53,6 @@ jobs:
         
     - name: Install dependencies
       run: npm install
-      
-    - name: Build project
-      run: npm run build
-      
-    - name: Run linting
-      run: npm run style
-      
-    - name: Run tests
-      run: npm test
 
-    # - name: Test documentation (modern Node only)
-    #   run: |
-    #     npm run doc
-    #     npm run test:doc
+    - name: Run Validate
+      run: npm run validate
