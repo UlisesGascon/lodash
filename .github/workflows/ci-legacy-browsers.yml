@@ -22,7 +22,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install selenium-webdriver
+
 
       - name: Build project
         run: npm run build
@@ -35,105 +38,133 @@ jobs:
             region: ${{ secrets.SAUCE_REGION }}
             tunnelName: ${{ secrets.SAUCE_TUNNEL_NAME }}
 
-      - name: Make saucelabs.js executable
-        run: chmod +x ./test/saucelabs.js
 
-      - name: Run Sauce Labs Tests - lodash (dev)
-        run: ./test/saucelabs.js name="lodash tests" runner="test/index.html?build=../dist/lodash.js&noglobals=true" tags=development
+      - name: Start local test server
+        run: |
+          npx http-server -p 9001 &
+          sleep 3
+
+      - name: Debug available Sauce Labs platforms
+        run: |
+          echo "Fetching available Sauce Labs platforms..."
+          curl -u "$SAUCE_USERNAME:$SAUCE_ACCESS_KEY" \
+            "https://api.${SAUCE_REGION}.saucelabs.com/v1/metadata/platforms/webdriver" \
+            | jq '.[] | {os: .os, browserName: .browserName, short_version: .short_version}' \
+            | tee sauce-platforms.json
         env:
           SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
           SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-
-      - name: Run Sauce Labs Tests - lodash (prod)
-        run: ./test/saucelabs.js name="lodash tests" runner="test/index.html?build=../dist/lodash.min.js&noglobals=true" tags=production
+      - name: Run legacy tests on Sauce Labs
+        run: node test/sauce-runner.js
         env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+            SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+            SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+            SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+            SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+            COMMIT_SHA: ${{ github.sha }}
+
+      # - name: Make saucelabs.js executable
+      #   run: chmod +x ./test/saucelabs.js
+
+      # - name: Run Sauce Labs Tests - lodash (dev)
+      #   run: ./test/saucelabs.js name="lodash tests" runner="test/index.html?build=../dist/lodash.js&noglobals=true" tags=development
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - lodash-fp
-        run: ./test/saucelabs.js name="lodash-fp tests" runner="test/fp.html?noglobals=true" tags=development
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+
+      # - name: Run Sauce Labs Tests - lodash (prod)
+      #   run: ./test/saucelabs.js name="lodash tests" runner="test/index.html?build=../dist/lodash.min.js&noglobals=true" tags=production
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - underscore (dev)
-        run: ./test/saucelabs.js name="underscore tests" runner="test/underscore.html?build=../dist/lodash.js" tags=development,underscore
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - lodash-fp
+      #   run: ./test/saucelabs.js name="lodash-fp tests" runner="test/fp.html?noglobals=true" tags=development
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - underscore (prod)
-        run: ./test/saucelabs.js name="underscore tests" runner="test/underscore.html?build=../dist/lodash.min.js" tags=production,underscore
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - underscore (dev)
+      #   run: ./test/saucelabs.js name="underscore tests" runner="test/underscore.html?build=../dist/lodash.js" tags=development,underscore
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - backbone (dev - full)
-        run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.js" tags=development,backbone
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - underscore (prod)
+      #   run: ./test/saucelabs.js name="underscore tests" runner="test/underscore.html?build=../dist/lodash.min.js" tags=production,underscore
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - backbone (prod - full)
-        run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.min.js" tags=production,backbone
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - backbone (dev - full)
+      #   run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.js" tags=development,backbone
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - backbone (dev - core)
-        run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.core.js" tags=development,backbone
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - backbone (prod - full)
+      #   run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.min.js" tags=production,backbone
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
 
-      - name: Run Sauce Labs Tests - backbone (prod - core)
-        run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.core.min.js" tags=production,backbone
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          SAUCE_TUNNEL_EXTERNAL: true
-          SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
-          COMMIT_SHA: ${{ github.sha }}
-          SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+      # - name: Run Sauce Labs Tests - backbone (dev - core)
+      #   run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.core.js" tags=development,backbone
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
+
+
+      # - name: Run Sauce Labs Tests - backbone (prod - core)
+      #   run: ./test/saucelabs.js name="backbone tests" runner="test/backbone.html?build=../dist/lodash.core.min.js" tags=production,backbone
+      #   env:
+      #     SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #     SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #     SAUCE_TUNNEL_EXTERNAL: true
+      #     SAUCE_TUNNEL_NAME: ${{ secrets.SAUCE_TUNNEL_NAME }}
+      #     COMMIT_SHA: ${{ github.sha }}
+      #     SAUCE_REGION: ${{ secrets.SAUCE_REGION }}
 
