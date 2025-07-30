@@ -1,4 +1,3 @@
-// playwright.config.js
 const { devices } = require('@playwright/test');
 
 module.exports = {
