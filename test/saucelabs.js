@@ -63,7 +63,7 @@ var throbberDelay = 500,
  * for more details.
  */
 var advisor = getOption('advisor', false),
-    build = getOption('build', (env.TRAVIS_COMMIT || '').slice(0, 10)),
+    build = getOption('build', (env.COMMIT_SHA || '').slice(0, 10)),
     commandTimeout = getOption('commandTimeout', 90),
     compatMode = getOption('compatMode', null),
     customData = Function('return {' + getOption('customData', '').replace(/^\{|}$/g, '') + '}')(),
@@ -83,9 +83,20 @@ var advisor = getOption('advisor', false),
     tags = getOption('tags', []),
     throttled = getOption('throttled', 10),
     tunneled = getOption('tunneled', true),
-    tunnelId = getOption('tunnelId', 'tunnel_' + (env.TRAVIS_JOB_ID || 0)),
+    tunnelId = getOption('tunnelId', env.SAUCE_TUNNEL_NAME || 'tunnel_0'),
     tunnelTimeout = getOption('tunnelTimeout', 120),
     videoUploadOnPass = getOption('videoUploadOnPass', false);
+
+/**
+ * Builds the Sauce Labs API URL for the given endpoint.
+ *
+ * @private
+ * @param {string} endpoint The API endpoint path.
+ * @returns {string} Returns the complete API URL.
+ */
+function buildSauceUrl(endpoint) {
+  return 'https://api.' + env.SAUCE_REGION + '.saucelabs.com/rest/v1/' + endpoint;
+};
 
 /** Used to convert Sauce Labs browser identifiers to their formal names. */
 var browserNameMap = {
@@ -172,6 +183,7 @@ if (isModern) {
 }
 
 /** Used as the default `Job` options object. */
+console.log('Build ID:', build);
 var jobOptions = {
   'build': build,
   'command-timeout': commandTimeout,
@@ -547,7 +559,7 @@ Job.prototype.remove = function(callback) {
       _.defer(onRemove);
       return;
     }
-    request.del(_.template('https://saucelabs.com/rest/v1/${user}/jobs/${id}')(this), {
+    request.del(buildSauceUrl(_.template('${user}/jobs/${id}')(this)), {
       'auth': { 'user': this.user, 'pass': this.pass }
     }, onRemove);
   });
@@ -607,7 +619,7 @@ Job.prototype.start = function(callback) {
     return this;
   }
   this.starting = true;
-  request.post(_.template('https://saucelabs.com/rest/v1/${user}/js-tests')(this), {
+  request.post(buildSauceUrl(_.template('${user}/js-tests')(this)), {
     'auth': { 'user': this.user, 'pass': this.pass },
     'json': this.options
   }, _.bind(onJobStart, this));
@@ -629,7 +641,7 @@ Job.prototype.status = function(callback) {
   }
   this._pollerId = null;
   this.checking = true;
-  request.post(_.template('https://saucelabs.com/rest/v1/${user}/js-tests/status')(this), {
+  request.post(buildSauceUrl(_.template('${user}/js-tests/status')(this)), {
     'auth': { 'user': this.user, 'pass': this.pass },
     'json': { 'js tests': [this.taskId] }
   }, _.bind(onJobStatus, this));
@@ -660,7 +672,7 @@ Job.prototype.stop = function(callback) {
     _.defer(onStop);
     return this;
   }
-  request.put(_.template('https://saucelabs.com/rest/v1/${user}/jobs/${id}/stop')(this), {
+  request.put(buildSauceUrl(_.template('${user}/jobs/${id}/stop')(this)), {
     'auth': { 'user': this.user, 'pass': this.pass }
   }, onStop);
 
@@ -886,23 +898,52 @@ http.createServer(function(req, res) {
   mount(req, res);
 }).listen(port);
 
-// Setup Sauce Connect so we can use this server from Sauce Labs.
-var tunnel = new Tunnel({
-  'user': username,
-  'pass': accessKey,
-  'id': tunnelId,
-  'job': { 'retries': maxJobRetries, 'statusInterval': statusInterval },
-  'platforms': platforms,
-  'retries': maxTunnelRetries,
-  'throttled': throttled,
-  'tunneled': tunneled,
-  'timeout': tunnelTimeout
-});
+if (process.env.SAUCE_TUNNEL_EXTERNAL === 'true') {
+  // Tunnel is already active — just run the jobs without opening a new tunnel
+  console.log(chalk.yellow('Tunnel externally managed; skipping tunnel startup.'));
 
-tunnel.on('complete', function(success) {
-  process.exit(success ? 0 : 1);
-});
+  var activeJobs = _.map(platforms, function(platform) {
+    return new Job({
+      user: username,
+      pass: accessKey,
+      options: _.merge({}, jobOptions, { platforms: [platform] })
+    });
+  });
 
-tunnel.start();
+  var completed = 0;
+  var failed = false;
+
+  _.forEach(activeJobs, function(job) {
+    job.on('complete', function() {
+      completed++;
+      if (job.failed) {
+        failed = true;
+      }
+      if (completed === activeJobs.length) {
+        process.exit(failed ? 1 : 0);
+      }
+    });
+    job.start();
+  });
+} else {
+  // Use built-in tunnel logic
+  var tunnel = new Tunnel({
+    'user': username,
+    'pass': accessKey,
+    'id': tunnelId,
+    'job': { 'retries': maxJobRetries, 'statusInterval': statusInterval },
+    'platforms': platforms,
+    'retries': maxTunnelRetries,
+    'throttled': throttled,
+    'tunneled': tunneled,
+    'timeout': tunnelTimeout
+  });
+
+  tunnel.on('complete', function(success) {
+    process.exit(success ? 0 : 1);
+  });
+
+  tunnel.start();
+}
 
 setInterval(logThrobber, throbberDelay);
