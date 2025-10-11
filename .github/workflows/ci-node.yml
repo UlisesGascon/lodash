@@ -17,10 +17,9 @@ jobs:
       matrix:
         # @TODO: Update to support MacOS and Windows in the future
         os: [ubuntu-latest]
-        # @TODO: Solve compatibility issues with Node@5 and npm@3
         node-version: [
           '4',
-          #'5', 
+          '5', 
           '6',
           '7',
           '8',
