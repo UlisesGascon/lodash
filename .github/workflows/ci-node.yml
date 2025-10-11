@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # @TODO: Update to support MacOS and Windows in the future
-        os: [ubuntu-latest]
+        # Now supports Ubuntu, MacOS, and Windows
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node-version: [
           '4',
           '5',
