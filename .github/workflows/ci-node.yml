@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest]
         node-version: [
           '4',
-          '5', 
+          '5',
           '6',
           '7',
           '8',
@@ -51,7 +51,12 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        
+
+    # This is due to bugs in npm 3’s handling of newer package formats.  
+    - name: Use npm@3.10.10 for Node@5
+      if: matrix.node-version == '5'
+      run: npm install -g npm@3.10.10
+
     - name: Install dependencies
       run: npm install
       
