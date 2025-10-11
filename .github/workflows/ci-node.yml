@@ -1,0 +1,60 @@
+name: CI Node.js
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    # Run on every PR, regardless of branch
+    branches: [ '*' ]
+
+jobs:
+  test:
+    name: Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        # @TODO: Update to support MacOS and Windows in the future
+        os: [ubuntu-latest]
+        # @TODO: Solve compatibility issues with Node@5 and npm@3
+        node-version: [
+          '4',
+          #'5', 
+          '6',
+          '7',
+          '8',
+          '9',
+          '10',
+          '11',
+          '12',
+          '13',
+          '14',
+          '15',
+          '16',
+          '17',
+          '18',
+          '19',
+          '20',
+          '21',
+          '22',
+          '23',
+          '24'
+        ]
+
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Run Validate
+      run: npm run validate
